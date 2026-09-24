@@ -15,6 +15,11 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         return False
 
 
+def get_password_hash(password: str) -> str:
+    """Return the bcrypt hash of a password."""
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+
 def create_access_token(user_id: int, expires_delta: timedelta | None = None) -> str:
     expires_at = datetime.now(timezone.utc) + (
         expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
