@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     APP_NAME: str = "Mini-Football Management API"
-    DATABASE_URL: str = "postgresql+psycopg2://postgres:password@localhost:5432/mini-footbal-db"
+    DATABASE_URL: str = "postgresql+psycopg2://postgres:55555@localhost:5432/mini-football-db"
     SECRET_KEY: str = "change-this-before-deployment"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
