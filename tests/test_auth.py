@@ -10,7 +10,7 @@ from app.config import settings
 from app.database import Base
 from app.dependencies import get_db
 from app.main import app
-from app.models.users import User
+from app.models.users import User, UserRole
 
 
 def password_hash(password: str) -> str:
@@ -32,7 +32,14 @@ def test_login_returns_a_bearer_token_for_valid_credentials():
         app.dependency_overrides[get_db] = override_get_db
         try:
             with session_factory() as db:
-                db.add(User(username="player", hashed_password=password_hash("Secret123")))
+                db.add(
+                    User(
+                        username="player",
+                        email="player@example.com",
+                        hashed_password=password_hash("Secret123"),
+                        user_role=UserRole.MANAGER,
+                    )
+                )
                 db.commit()
 
             with TestClient(app) as client:

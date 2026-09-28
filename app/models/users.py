@@ -1,5 +1,5 @@
 from sqlalchemy import Boolean, String, Enum
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 import enum
 
 from app.database import Base
@@ -23,4 +23,9 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(100), unique=True, index=True)
     hashed_password: Mapped[str] = mapped_column(String(255))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
-    user_role: Mapped[str] = mapped_column(Enum(UserRole), name = "user_role")
+    user_role: Mapped[UserRole] = mapped_column(Enum(UserRole, name="user_role"), nullable=False)
+
+    managed_teams = relationship("Team", back_populates="manager", foreign_keys="Team.manager_id")
+    created_tournaments = relationship(
+        "Tournament", back_populates="created_by", foreign_keys="Tournament.created_by_id"
+    )
