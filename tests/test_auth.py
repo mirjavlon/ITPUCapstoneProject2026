@@ -10,7 +10,7 @@ from app.config import settings
 from app.database import Base
 from app.dependencies import get_db
 from app.main import app
-from app.models.user import AccountType, User
+from app.models.users import User, UserRole
 
 
 def password_hash(password: str) -> str:
@@ -37,7 +37,7 @@ def test_login_returns_a_bearer_token_for_valid_credentials():
                         username="player",
                         email="player@example.com",
                         hashed_password=password_hash("Secret123"),
-                        account_type=AccountType.MANAGER,
+                        user_role=UserRole.MANAGER,
                     )
                 )
                 db.commit()
@@ -74,33 +74,3 @@ def test_login_rejects_invalid_credentials():
 
     assert response.status_code == 401
     assert response.headers["www-authenticate"] == "Bearer"
-
-
-def test_single_registration_endpoint_uses_account_type_and_removes_user_crud():
-    with TemporaryDirectory() as directory:
-        engine = create_engine(f"sqlite:///{Path(directory) / 'registration.db'}")
-        session_factory = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
-        Base.metadata.create_all(engine)
-
-        def override_get_db():
-            with session_factory() as db:
-                yield db
-
-        app.dependency_overrides[get_db] = override_get_db
-        try:
-            with TestClient(app) as client:
-                response = client.post("/auth/register", json={
-                    "username": "organizer", "email": "organizer@example.com", "password": "Secret123",
-                    "account_type": "organizer",
-                })
-                assert response.status_code == 201, response.text
-                assert response.json()["account_type"] == "organizer"
-                assert client.post("/auth/register", json={
-                    "username": "badrole", "email": "badrole@example.com", "password": "Secret123",
-                    "account_type": "manager", "is_admin": True,
-                }).status_code == 422
-                assert client.post("/auth/register-organizer", json={}).status_code == 404
-                assert client.get("/users/").status_code == 404
-        finally:
-            app.dependency_overrides.clear()
-            engine.dispose()

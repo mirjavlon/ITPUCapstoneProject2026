@@ -3,7 +3,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 
-
 class Player(Base):
     __tablename__ = "players"
     __table_args__ = (
@@ -19,9 +18,5 @@ class Player(Base):
     team_id: Mapped[int] = mapped_column(ForeignKey("teams.id", ondelete="CASCADE"), index=True)
 
     team = relationship("Team", back_populates="players")
-    scored_goal_events = relationship(
-        "GoalEvent", foreign_keys="GoalEvent.scorer_id", back_populates="scorer"
-    )
-    assisted_goal_events = relationship(
-        "GoalEvent", foreign_keys="GoalEvent.assist_player_id", back_populates="assist_player"
-    )
+    scored_goal_events = relationship("GoalEvent", foreign_keys="GoalEvent.scorer_id", back_populates="scorer")
+    assisted_goal_events = relationship("GoalEvent", foreign_keys="GoalEvent.assist_player_id", back_populates="assist_player")
