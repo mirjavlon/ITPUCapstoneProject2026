@@ -1,14 +1,12 @@
 from typing import Annotated
-
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
 from sqlalchemy.orm import Session
-
-from app.config import settings
 from app.database import SessionLocal
-from app.models.users import User, UserRole
+from app.models.user import AccountType, User
+from app.utils.security import decode_access_token
 
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login", auto_error=False)
 
 def get_db():
     db = SessionLocal()
@@ -17,25 +15,23 @@ def get_db():
     finally:
         db.close()
 
+db_dependency = Annotated[Session, Depends(get_db)]
 
-DbSession = Annotated[Session, Depends(get_db)]
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login", auto_error=False)
-
-
-def get_current_user_optional(token: Annotated[str | None, Depends(oauth2_scheme)], db: DbSession) -> User | None:
-    if not token:
-        return None
-    try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        user_id = int(payload.get("sub"))
-    except (JWTError, TypeError, ValueError):
-        return None
-    user = db.get(User, user_id)
+async def get_optional_user(
+    request: Request,
+    token: Annotated[str | None, Depends(oauth2_scheme)],
+    db: db_dependency,
+) -> User | None:
+    token = token or request.cookies.get("access_token")
+    user_id = decode_access_token(token) if token else None
+    user = db.get(User, user_id) if user_id is not None else None
     return user if user and user.is_active else None
 
 
-def get_current_user(current_user: Annotated[User | None, Depends(get_current_user_optional)]) -> User:
+optional_user_dependency = Annotated[User | None, Depends(get_optional_user)]
+
+
+async def get_current_user(current_user: optional_user_dependency):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -45,10 +41,7 @@ def get_current_user(current_user: Annotated[User | None, Depends(get_current_us
         raise credentials_exception
     return current_user
 
-
-def get_current_organizer(
-    current_user: Annotated[User, Depends(get_current_user)],
-) -> User:
-    if current_user.user_role != UserRole.ORGANIZER:
+async def get_current_organizer(current_user: Annotated[User, Depends(get_current_user)]):
+    if current_user.account_type != AccountType.ORGANIZER:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Organizer access required")
     return current_user

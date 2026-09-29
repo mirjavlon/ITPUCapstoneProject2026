@@ -1,9 +1,7 @@
-from app.models.goal_event import GoalEvent
-from app.models.match_result_revision import MatchResultRevision
-from app.models.matches import Match
+from app.models.match import GoalEvent, Match, MatchResultRevision
 from app.models.player import Player
-from app.models.teams import Team
+from app.models.team import Team
 from app.models.tournament import Tournament
-from app.models.users import User, UserRole
+from app.models.user import AccountType, User
 
-__all__ = ["GoalEvent", "Match", "MatchResultRevision", "Player", "Team", "Tournament", "User", "UserRole"]
+__all__ = ["AccountType", "GoalEvent", "Match", "MatchResultRevision", "Player", "Team", "Tournament", "User"]
