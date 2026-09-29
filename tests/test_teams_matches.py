@@ -11,7 +11,7 @@ from app.dependencies import get_db
 from app.main import app
 from app.models.player import Player
 from app.models.tournament import Tournament
-from app.models.users import User, UserRole
+from app.models.user import AccountType, User
 
 
 def password_hash(password: str) -> str:
@@ -33,11 +33,11 @@ def test_team_and_match_lifecycle():
             with session_factory() as db:
                 organizer = User(
                     username="organizer", email="organizer@example.com", hashed_password=password_hash("Secret123"),
-                    user_role=UserRole.ORGANIZER,
+                    account_type=AccountType.ORGANIZER,
                 )
                 manager = User(
                     username="manager", email="manager@example.com", hashed_password=password_hash("Secret123"),
-                    user_role=UserRole.MANAGER,
+                    account_type=AccountType.MANAGER,
                 )
                 db.add_all([organizer, manager])
                 db.flush()
@@ -106,7 +106,7 @@ def test_organizer_can_create_publish_and_read_a_tournament():
             with TestClient(app) as client:
                 registered = client.post("/auth/register", json={
                     "username": "cupowner", "email": "cupowner@example.com", "password": "Secret123",
-                    "user_role": "organizer",
+                    "account_type": "organizer",
                 })
                 assert registered.status_code == 201, registered.text
                 token = client.post("/auth/login", data={"username": "cupowner", "password": "Secret123"})

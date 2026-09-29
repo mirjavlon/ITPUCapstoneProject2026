@@ -1,18 +1,27 @@
 from functools import lru_cache
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """Runtime configuration loaded from environment variables or `.env`."""
-
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     APP_NAME: str = "Mini-Football Management API"
-    DATABASE_URL: str = "postgresql+psycopg2://postgres:55555@localhost:5432/mini-football-db"
-    SECRET_KEY: str = "change-this-before-deployment"
+    ENVIRONMENT: str = "development"
+    SECRET_KEY: str = "change-this-development-secret"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    DATABASE_URL: str = "postgresql+psycopg2://postgres:55555@localhost:5432/Capstone_Project_db"
+    CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:8000"]
+    APP_TIMEZONE: str = "Asia/Tashkent"
+
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def split_origins(cls, value: object) -> object:
+        if isinstance(value, str) and not value.lstrip().startswith("["):
+            return [origin.strip() for origin in value.split(",") if origin.strip()]
+        return value
 
 
 @lru_cache

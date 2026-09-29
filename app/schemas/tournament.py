@@ -50,15 +50,3 @@ class TournamentResponse(TournamentBase):
 
     id: int
     status: str
-
-
-class TopScorerResponse(BaseModel):
-    position: int
-    player_id: int
-    player_name: str
-    team_id: int
-    team_name: str
-    tournament_id: int
-    tournament_name: str
-    goals: int
-    assists: int

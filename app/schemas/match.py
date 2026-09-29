@@ -3,14 +3,12 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-
 class MatchBase(BaseModel):
     tournament_id: int
     home_team_id: int
     away_team_id: int
     match_date: datetime
     venue: str | None = Field(default=None, max_length=150)
-
 
 class MatchCreate(MatchBase):
     @field_validator("match_date")
@@ -19,7 +17,6 @@ class MatchCreate(MatchBase):
         if value.tzinfo is None or value.utcoffset() is None:
             raise ValueError("match_date must include a timezone offset")
         return value
-
 
 class MatchUpdate(BaseModel):
     match_date: datetime | None = None
@@ -39,7 +36,6 @@ class MatchUpdate(BaseModel):
         if value is not None and (value.tzinfo is None or value.utcoffset() is None):
             raise ValueError("match_date must include a timezone offset")
         return value
-
 
 class MatchScoreUpdate(BaseModel):
     home_score: int = Field(ge=0, le=99)
@@ -61,7 +57,6 @@ class MatchResultWithdraw(BaseModel):
     @classmethod
     def trim_reason(cls, value):
         return value.strip() if isinstance(value, str) else value
-
 
 class MatchResponse(MatchBase):
     model_config = ConfigDict(from_attributes=True)
@@ -104,3 +99,17 @@ class GoalEventResponse(BaseModel):
     assist_player_name: str | None
     minute: int
     created_at: datetime
+
+
+class StandingRow(BaseModel):
+    position: int
+    team_id: int
+    team_name: str
+    played: int
+    wins: int
+    draws: int
+    losses: int
+    goals_for: int
+    goals_against: int
+    goal_difference: int
+    points: int
