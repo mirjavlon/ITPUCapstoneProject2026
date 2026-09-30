@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Manager account · Mini Football{% endblock %}
+{% block content %}
+    <section class="auth-shell container-xl">
+        <div class="auth-copy">
+            <span class="section-kicker">TEAM MANAGERS</span>
+            <h1>Keep your roster ready for match day.</h1>
+            <p>Create a manager account, register your team, and maintain its player list.</p>
+        </div>
+        <div class="auth-card">
+            <h2>Create account</h2>
+            <p class="text-secondary">Organizer permissions are assigned separately.</p>
+            {% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
+            <form method="post" action="/register" class="form-stack">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <div>
+                    <label class="form-label" for="username">Username</label>
+                    <input class="form-control"
+                           id="username"
+                           name="username"
+                           required
+                           minlength="3"
+                           maxlength="50"
+                           value="{{ form.username or '' }}"
+                           autocomplete="username">
+                </div>
+                <div>
+                    <label class="form-label" for="email">Email</label>
+                    <input class="form-control"
+                           id="email"
+                           name="email"
+                           type="email"
+                           required
+                           value="{{ form.email or '' }}"
+                           autocomplete="email">
+                </div>
+                <div>
+                    <label class="form-label" for="password">Password</label>
+                    <input class="form-control"
+                           id="password"
+                           name="password"
+                           type="password"
+                           required
+                           minlength="8"
+                           maxlength="72"
+                           autocomplete="new-password">
+                    <div class="form-text">Use at least 8 characters.</div>
+                </div>
+                <button class="btn btn-accent w-100" type="submit">Create manager account</button>
+            </form>
+            <p class="auth-foot">Already registered? <a href="/login">Sign in</a></p>
+        </div>
+    </section>
+{% endblock %}

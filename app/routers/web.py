@@ -1,10 +1,11 @@
 import hmac
+from uuid import uuid4
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Form, HTTPException, Request
+from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError
@@ -51,6 +52,46 @@ from app.utils.security import create_access_token, decode_access_token, get_pas
 router = APIRouter(tags=["website"], include_in_schema=False)
 templates = Jinja2Templates(directory=Path(__file__).resolve().parents[2] / "templates")
 local_timezone = ZoneInfo(settings.APP_TIMEZONE)
+supported_languages = {"en", "uz"}
+static_directory = Path(__file__).resolve().parents[2] / "static"
+team_logo_directory = static_directory / "uploads" / "team-logos"
+max_logo_size = 5 * 1024 * 1024
+
+
+def store_team_logo(logo_file: UploadFile | None) -> str | None:
+    if not logo_file or not logo_file.filename:
+        return None
+
+    allowed_types = {
+        "image/jpeg": ("jpg", b"\xff\xd8\xff"),
+        "image/png": ("png", b"\x89PNG\r\n\x1a\n"),
+        "image/gif": ("gif", b"GIF8"),
+        "image/webp": ("webp", b"RIFF"),
+    }
+    extension_and_signature = allowed_types.get(logo_file.content_type or "")
+    if not extension_and_signature:
+        raise HTTPException(status_code=422, detail="Logo must be a PNG, JPEG, GIF, or WebP image")
+
+    content = logo_file.file.read(max_logo_size + 1)
+    if not content:
+        raise HTTPException(status_code=422, detail="The logo file is empty")
+    if len(content) > max_logo_size:
+        raise HTTPException(status_code=422, detail="Logo must be 5 MB or smaller")
+
+    extension, signature = extension_and_signature
+    is_webp = extension != "webp" or content[8:12] == b"WEBP"
+    if not content.startswith(signature) or not is_webp:
+        raise HTTPException(status_code=422, detail="The uploaded file is not a valid image")
+
+    team_logo_directory.mkdir(parents=True, exist_ok=True)
+    filename = f"{uuid4().hex}.{extension}"
+    (team_logo_directory / filename).write_bytes(content)
+    return f"/static/uploads/team-logos/{filename}"
+
+
+def remove_stored_team_logo(logo_url: str | None) -> None:
+    if logo_url and logo_url.startswith("/static/uploads/team-logos/"):
+        (team_logo_directory / Path(logo_url).name).unlink(missing_ok=True)
 
 
 def local_datetime(value: datetime | None, format_string: str = "%d %b %Y, %H:%M") -> str:
@@ -104,6 +145,7 @@ def context(request: Request, db, **values) -> dict:
         "csrf_token": request.state.csrf_token,
         "current_user": current_user(request, db),
         "messages": request.session.pop("messages", []),
+        "language": request.session.get("language") if request.session.get("language") in supported_languages else "en",
         **values,
     }
 
@@ -117,11 +159,25 @@ def render(request: Request, db, template_name: str, *, status_code: int = 200, 
     )
 
 
-def require_user(request: Request, db, *, admin: bool = False) -> User | RedirectResponse:
+@router.post("/language")
+def change_language(
+    request: Request,
+    db: db_dependency,
+    language: str = Form(...),
+    csrf_token: str = Form(...),
+    next_path: str = Form("/"),
+):
+    verify_csrf(request, csrf_token)
+    if language in supported_languages:
+        request.session["language"] = language
+    return RedirectResponse(safe_next(next_path, default="/"), status_code=303)
+
+
+def require_user(request: Request, db, *, organizer: bool = False) -> User | RedirectResponse:
     user = current_user(request, db)
     if not user:
         return RedirectResponse(f"/login?next={request.url.path}", status_code=303)
-    if admin and not user.is_organizer:
+    if organizer and not user.is_organizer:
         return render(
             request,
             db,
@@ -318,7 +374,10 @@ def register_submit(
     form = {"username": username, "email": email}
     try:
         payload = UserCreate(
-            username=username.strip(), email=email.strip(), password=password, account_type=AccountType.MANAGER
+            username=username.strip(),
+            email=email.strip(),
+            password=password,
+            account_type=AccountType.MANAGER,
         )
     except ValidationError as exc:
         return render(request, db, "register.html", status_code=422, error=exc.errors()[0]["msg"], form=form)
@@ -360,7 +419,10 @@ def organizer_register_submit(
     form = {"username": username, "email": email}
     try:
         payload = UserCreate(
-            username=username.strip(), email=email.strip(), password=password, account_type=AccountType.ORGANIZER
+            username=username.strip(),
+            email=email.strip(),
+            password=password,
+            account_type=AccountType.ORGANIZER,
         )
     except ValidationError as exc:
         return render(request, db, "organizer_register.html", status_code=422, error=exc.errors()[0]["msg"], form=form)
@@ -436,7 +498,7 @@ def dashboard(request: Request, db: db_dependency):
 
 @router.get("/dashboard/tournaments/new", response_class=HTMLResponse)
 def tournament_create_page(request: Request, db: db_dependency):
-    user = require_user(request, db, admin=True)
+    user = require_user(request, db, organizer=True)
     if not isinstance(user, User):
         return user
     return render(request, db, "tournament_form.html", tournament=None, error=None, form={}, teams=[], matches=[])
@@ -447,7 +509,6 @@ def tournament_create_submit(
     request: Request,
     db: db_dependency,
     name: str = Form(...),
-    slug: str = Form(...),
     start_date: str = Form(""),
     end_date: str = Form(""),
     win_points: int = Form(3),
@@ -455,13 +516,12 @@ def tournament_create_submit(
     loss_points: int = Form(0),
     csrf_token: str = Form(...),
 ):
-    user = require_user(request, db, admin=True)
+    user = require_user(request, db, organizer=True)
     if not isinstance(user, User):
         return user
     verify_csrf(request, csrf_token)
     form = {
         "name": name,
-        "slug": slug,
         "start_date": start_date,
         "end_date": end_date,
         "win_points": win_points,
@@ -471,7 +531,6 @@ def tournament_create_submit(
     try:
         payload = TournamentCreate(
             name=name.strip(),
-            slug=slug.strip().lower(),
             start_date=date.fromisoformat(start_date) if start_date else None,
             end_date=date.fromisoformat(end_date) if end_date else None,
             win_points=win_points,
@@ -487,7 +546,7 @@ def tournament_create_submit(
 
 @router.get("/dashboard/tournaments/{tournament_id}/edit", response_class=HTMLResponse)
 def tournament_edit_page(tournament_id: int, request: Request, db: db_dependency):
-    user = require_user(request, db, admin=True)
+    user = require_user(request, db, organizer=True)
     if not isinstance(user, User):
         return user
     tournament = db.get(Tournament, tournament_id)
@@ -504,7 +563,6 @@ def tournament_edit_submit(
     request: Request,
     db: db_dependency,
     name: str = Form(...),
-    slug: str = Form(...),
     start_date: str = Form(""),
     end_date: str = Form(""),
     win_points: int = Form(3),
@@ -512,17 +570,17 @@ def tournament_edit_submit(
     loss_points: int = Form(0),
     csrf_token: str = Form(...),
 ):
-    user = require_user(request, db, admin=True)
+    user = require_user(request, db, organizer=True)
     if not isinstance(user, User):
         return user
     verify_csrf(request, csrf_token)
     tournament = db.get(Tournament, tournament_id)
     if not tournament or not owns_tournament(tournament, user):
         return render(request, db, "error.html", status_code=403 if tournament else 404, title="Tournament unavailable", message="You cannot manage this tournament.")
-    form = {"name": name, "slug": slug, "start_date": start_date, "end_date": end_date, "win_points": win_points, "draw_points": draw_points, "loss_points": loss_points}
+    form = {"name": name, "start_date": start_date, "end_date": end_date, "win_points": win_points, "draw_points": draw_points, "loss_points": loss_points}
     try:
         payload = TournamentUpdate(
-            name=name.strip(), slug=slug.strip().lower(),
+            name=name.strip(),
             start_date=date.fromisoformat(start_date) if start_date else None,
             end_date=date.fromisoformat(end_date) if end_date else None,
             win_points=win_points, draw_points=draw_points, loss_points=loss_points,
@@ -544,7 +602,7 @@ def tournament_status_submit(
     tournament_status: str = Form(...),
     csrf_token: str = Form(...),
 ):
-    user = require_user(request, db, admin=True)
+    user = require_user(request, db, organizer=True)
     if not isinstance(user, User):
         return user
     verify_csrf(request, csrf_token)
@@ -575,6 +633,7 @@ def team_create_submit(
     manager_id: str = Form(""),
     contact_info: str = Form(""),
     logo_url: str = Form(""),
+    logo_file: UploadFile | None = File(None),
     csrf_token: str = Form(...),
 ):
     user = require_user(request, db)
@@ -582,16 +641,19 @@ def team_create_submit(
         return user
     verify_csrf(request, csrf_token)
     form = {"tournament_id": tournament_id, "name": name, "manager_id": manager_id, "contact_info": contact_info, "logo_url": logo_url}
+    uploaded_logo_url = None
     try:
+        uploaded_logo_url = store_team_logo(logo_file)
         payload = TeamCreate(
             tournament_id=tournament_id,
             name=name.strip(),
             manager_id=int(manager_id) if manager_id and user.is_organizer else None,
             contact_info=contact_info.strip() or None,
-            logo_url=logo_url.strip() or None,
+            logo_url=uploaded_logo_url or logo_url.strip() or None,
         )
         team = api_create_team(payload, db, user)
     except (ValidationError, HTTPException, ValueError) as exc:
+        remove_stored_team_logo(uploaded_logo_url)
         tournaments = selectable_tournaments(db, user)
         managers = db.query(User).filter(User.is_active.is_(True), User.account_type == AccountType.MANAGER).order_by(User.username).all() if user.is_organizer else []
         return render(request, db, "team_form.html", status_code=422, team=None, error=error_text(exc), form=form, tournaments=tournaments, managers=managers, players=[])
@@ -622,6 +684,7 @@ def team_edit_submit(
     manager_id: str = Form(""),
     contact_info: str = Form(""),
     logo_url: str = Form(""),
+    logo_file: UploadFile | None = File(None),
     is_active: str | None = Form(None),
     csrf_token: str = Form(...),
 ):
@@ -632,14 +695,19 @@ def team_edit_submit(
     team = db.get(Team, team_id)
     if not team or not can_manage_team(user, team):
         return render(request, db, "error.html", status_code=403 if team else 404, title="Team unavailable", message="You cannot manage this team.")
+    uploaded_logo_url = None
     try:
+        uploaded_logo_url = store_team_logo(logo_file)
         values = {
-            "name": name.strip(), "contact_info": contact_info.strip() or None, "logo_url": logo_url.strip() or None,
+            "name": name.strip(),
+            "contact_info": contact_info.strip() or None,
+            "logo_url": uploaded_logo_url or logo_url.strip() or None,
         }
         if user.is_organizer:
             values.update({"manager_id": int(manager_id) if manager_id else None, "is_active": is_active == "on"})
         api_update_team(team_id, TeamUpdate(**values), db, user)
     except (ValidationError, HTTPException, ValueError) as exc:
+        remove_stored_team_logo(uploaded_logo_url)
         flash(request, error_text(exc), "error")
     else:
         flash(request, "Team details updated.")
@@ -763,7 +831,7 @@ def player_delete_submit(player_id: int, request: Request, db: db_dependency, cs
 
 @router.get("/dashboard/matches/new", response_class=HTMLResponse)
 def match_create_page(request: Request, db: db_dependency, tournament_id: int | None = None):
-    user = require_user(request, db, admin=True)
+    user = require_user(request, db, organizer=True)
     if not isinstance(user, User):
         return user
     tournaments = selectable_tournaments(db, user)
@@ -784,7 +852,7 @@ def match_create_submit(
     venue: str = Form(""),
     csrf_token: str = Form(...),
 ):
-    user = require_user(request, db, admin=True)
+    user = require_user(request, db, organizer=True)
     if not isinstance(user, User):
         return user
     verify_csrf(request, csrf_token)
@@ -810,7 +878,7 @@ def match_create_submit(
 
 @router.get("/dashboard/matches/{match_id}/edit", response_class=HTMLResponse)
 def match_edit_page(match_id: int, request: Request, db: db_dependency):
-    user = require_user(request, db, admin=True)
+    user = require_user(request, db, organizer=True)
     if not isinstance(user, User):
         return user
     match = db.get(Match, match_id)
@@ -829,7 +897,7 @@ def match_edit_submit(
     match_status: str = Form("scheduled"),
     csrf_token: str = Form(...),
 ):
-    user = require_user(request, db, admin=True)
+    user = require_user(request, db, organizer=True)
     if not isinstance(user, User):
         return user
     verify_csrf(request, csrf_token)
@@ -851,7 +919,7 @@ def match_edit_submit(
 
 @router.get("/dashboard/matches/{match_id}/score", response_class=HTMLResponse)
 def match_score_page(match_id: int, request: Request, db: db_dependency):
-    user = require_user(request, db, admin=True)
+    user = require_user(request, db, organizer=True)
     if not isinstance(user, User):
         return user
     match = db.get(Match, match_id)
@@ -871,7 +939,7 @@ def match_score_submit(
     reason: str = Form(""),
     csrf_token: str = Form(...),
 ):
-    user = require_user(request, db, admin=True)
+    user = require_user(request, db, organizer=True)
     if not isinstance(user, User):
         return user
     verify_csrf(request, csrf_token)
@@ -895,7 +963,7 @@ def match_score_submit(
 
 @router.get("/dashboard/matches/{match_id}/goals", response_class=HTMLResponse)
 def match_goals_page(match_id: int, request: Request, db: db_dependency):
-    user = require_user(request, db, admin=True)
+    user = require_user(request, db, organizer=True)
     if not isinstance(user, User):
         return user
     match = db.get(Match, match_id)
@@ -933,7 +1001,7 @@ def match_goals_submit(
     minute: int = Form(...),
     csrf_token: str = Form(...),
 ):
-    user = require_user(request, db, admin=True)
+    user = require_user(request, db, organizer=True)
     if not isinstance(user, User):
         return user
     verify_csrf(request, csrf_token)
@@ -962,7 +1030,7 @@ def match_goal_delete_submit(
     db: db_dependency,
     csrf_token: str = Form(...),
 ):
-    user = require_user(request, db, admin=True)
+    user = require_user(request, db, organizer=True)
     if not isinstance(user, User):
         return user
     verify_csrf(request, csrf_token)
@@ -983,7 +1051,7 @@ def match_withdraw_submit(
     reason: str = Form(...),
     csrf_token: str = Form(...),
 ):
-    user = require_user(request, db, admin=True)
+    user = require_user(request, db, organizer=True)
     if not isinstance(user, User):
         return user
     verify_csrf(request, csrf_token)
@@ -999,7 +1067,7 @@ def match_withdraw_submit(
 
 @router.post("/dashboard/matches/{match_id}/delete")
 def match_delete_submit(match_id: int, request: Request, db: db_dependency, csrf_token: str = Form(...)):
-    user = require_user(request, db, admin=True)
+    user = require_user(request, db, organizer=True)
     if not isinstance(user, User):
         return user
     verify_csrf(request, csrf_token)

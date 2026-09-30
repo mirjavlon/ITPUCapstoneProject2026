@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit fixture' if match else 'Schedule match' }} · Mini Football{% endblock %}
+{% block content %}<section class="dashboard-head"><div class="container-xl py-5"><a class="back-link"
+   href="{{ '/dashboard/tournaments/' ~ match.tournament_id ~ '/edit' if match else '/dashboard' }}">← Back</a><div class="mt-3"><span class="section-kicker">MATCH CENTRE</span><h1 class="display-title">{{ 'Edit fixture' if match else 'Schedule match' }}</h1></div></div></section><div class="container-xl py-5"><div class="form-narrow panel-card">{% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}<form method="post" class="form-stack" data-match-form><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+{% if match %}<input type="hidden" name="tournament_id" value="{{ match.tournament_id }}"><div><label class="form-label">Tournament</label><input class="form-control" value="{{ match.tournament.name }}" disabled></div><div class="versus-card"><strong>{{ match.home_team.name }}</strong><span>vs</span><strong>{{ match.away_team.name }}</strong></div>{% else %}<div><label class="form-label" for="tournament_id">Tournament</label><select class="form-select"
+        id="tournament_id"
+        name="tournament_id"
+        required
+        data-tournament-select><option value="">Choose tournament</option>{% for tournament in tournaments %}<option value="{{ tournament.id }}"
+        {% if form.tournament_id|string == tournament.id|string %}selected{% endif %}>{{ tournament.name }}</option>{% endfor %}</select></div><div class="row g-3"><div class="col-sm-6"><label class="form-label" for="home_team_id">Home team</label><select class="form-select"
+        id="home_team_id"
+        name="home_team_id"
+        required
+        data-team-select><option value="">Choose team</option>{% for team in teams %}<option value="{{ team.id }}"
+        data-tournament="{{ team.tournament_id }}"
+        {% if form.home_team_id|string == team.id|string %}selected{% endif %}>{{ team.name }}</option>{% endfor %}</select></div><div class="col-sm-6"><label class="form-label" for="away_team_id">Away team</label><select class="form-select"
+        id="away_team_id"
+        name="away_team_id"
+        required
+        data-team-select><option value="">Choose team</option>{% for team in teams %}<option value="{{ team.id }}"
+        data-tournament="{{ team.tournament_id }}"
+        {% if form.away_team_id|string == team.id|string %}selected{% endif %}>{{ team.name }}</option>{% endfor %}</select></div></div>{% endif %}
+<div>
+    <label class="form-label" for="match_date">Date and time</label><input class="form-control"
+       id="match_date"
+       name="match_date"
+       type="datetime-local"
+       required
+       value="{{ form.match_date if form.match_date is defined else match.match_date|local_datetime("%Y-%m-%dT%H:%M") if match else '' }}">
+    <div class="form-text">Times use {{ request.app.state.timezone if request.app.state.timezone is defined else 'Asia/Tashkent' }}.</div>
+</div>
+<div>
+    <label class="form-label" for="venue">Venue</label><input class="form-control"
+       id="venue"
+       name="venue"
+       maxlength="150"
+       value="{{ form.venue if form.venue is defined else match.venue if match and match.venue else '' }}">
+</div>
+{% if match %}<div><label class="form-label" for="match_status">Status</label><select class="form-select" id="match_status" name="match_status"><option value="scheduled"
+        {% if match.status == 'scheduled' %}selected{% endif %}>Scheduled</option><option value="postponed"
+        {% if match.status == 'postponed' %}selected{% endif %}>Postponed</option><option value="cancelled"
+        {% if match.status == 'cancelled' %}selected{% endif %}>Cancelled</option></select></div>{% endif %}
+<button class="btn btn-accent" type="submit">{{ 'Save fixture' if match else 'Schedule match' }}</button></form>{% if match %}<form method="post"
+      action="/dashboard/matches/{{ match.id }}/delete"
+      class="mt-4"
+      data-confirm="Delete this fixture?"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="btn btn-link text-danger p-0" type="submit">Delete fixture</button></form>{% endif %}</div></div>{% endblock %}

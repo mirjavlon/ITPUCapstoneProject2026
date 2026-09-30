@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Tournaments · Mini Football{% endblock %}
+{% block content %}
+    <section class="page-band">
+        <div class="container-xl py-5">
+            <div class="eyebrow">COMMUNITY COMPETITIONS</div>
+            <div class="row align-items-end gy-3">
+                <div class="col-lg-8">
+                    <h1 class="display-title">Tournament board</h1>
+                    <p class="lead-copy mb-0">Check upcoming fixtures, recent results and live league tables.</p>
+                </div>
+                <div class="col-lg-4 text-lg-end">
+                    {% if current_user %}<a class="btn btn-accent" href="/dashboard">Open dashboard</a>{% else %}<a class="btn btn-outline-light" href="/login">Manage a tournament</a>{% endif %}
+                </div>
+            </div>
+        </div>
+    </section>
+    <section class="container-xl py-5">
+        <div class="section-heading">
+            <div>
+                <span class="section-kicker">LIVE DIRECTORY</span>
+                <h2>Published tournaments</h2>
+            </div>
+            <span class="count-pill">{{ cards|length }} <span>active</span></span>
+        </div>
+        {% if cards %}
+            <div class="row g-4">
+                {% for card in cards %}
+                    <div class="col-md-6 col-xl-4">
+                        <article class="tournament-card h-100">
+                            <div class="card-stripe"></div>
+                            <div class="p-4">
+                                <div class="d-flex justify-content-between gap-3 align-items-start">
+                                    <span class="status-chip">Published</span>
+                                    {% if card.tournament.start_date %}<time class="small-meta">{{ card.tournament.start_date.strftime("%d %b %Y") }}</time>{% endif %}
+                                </div>
+                                <h3 class="mt-4 mb-3">{{ card.tournament.name }}</h3>
+                                <div class="stat-row">
+                                    <div><strong>{{ card.team_count }}</strong><span>Teams</span></div>
+                                    <div><strong>{{ card.match_count }}</strong><span>Matches</span></div>
+                                </div>
+                                {% if card.next_match %}
+                                    <div class="next-fixture mt-4">
+                                        <span>Next fixture</span>
+                                        <strong>{{ card.next_match.home_team.name }} <em>vs</em> {{ card.next_match.away_team.name }}</strong>
+                                        <small>{{ card.next_match.match_date|local_datetime }}</small>
+                                    </div>
+                                {% else %}
+                                    <div class="next-fixture next-fixture-empty mt-4">No upcoming fixture scheduled</div>
+                                {% endif %}
+                                <a href="/tournaments/{{ card.tournament.id }}"
+                                   class="stretched-action mt-4">View tournament <span aria-hidden="true">→</span></a>
+                            </div>
+                        </article>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <div class="empty-icon" aria-hidden="true">0–0</div>
+                <h3>No tournaments are published yet</h3>
+                <p>Published competitions will appear here with their fixtures and standings.</p>
+                {% if current_user and current_user.is_organizer %}<a class="btn btn-accent"
+   href="/dashboard">Create a tournament</a>{% endif %}
+            </div>
+        {% endif %}
+    </section>
+{% endblock %}

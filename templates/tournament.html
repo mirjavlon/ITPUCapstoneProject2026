@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block title %}{{ tournament.name }} · Mini Football{% endblock %}
+{% block content %}
+    <section class="competition-head">
+        <div class="container-xl py-5">
+            <a class="back-link" href="/">← All tournaments</a>
+            <div class="d-lg-flex justify-content-between align-items-end gap-4 mt-4">
+                <div>
+                    <span class="status-chip">{{ tournament.status|capitalize }}</span>
+                    <h1 class="display-title mt-3">{{ tournament.name }}</h1>
+                    <p class="lead-copy mb-0">{% if tournament.start_date %}{{ tournament.start_date.strftime("%d %b %Y") }}{% endif %}{% if tournament.end_date %} — {{ tournament.end_date.strftime("%d %b %Y") }}{% endif %}</p>
+                </div>
+                <div class="rules-box"><span>Points</span><strong>{{ tournament.win_points }} / {{ tournament.draw_points }} / {{ tournament.loss_points }}</strong><small>Win · Draw · Loss</small></div>
+            </div>
+        </div>
+    </section>
+    <div class="container-xl py-5">
+        <div class="row g-5">
+            <section class="col-xl-8">
+                <div class="section-heading">
+                    <div>
+                        <span class="section-kicker">LEAGUE TABLE</span>
+                        <h2>Standings</h2>
+                    </div>
+                </div>
+                <div class="table-shell">
+                    <table class="table standings-table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Pos</th>
+                                <th>Team</th>
+                                <th title="Played">P</th>
+                                <th title="Won">W</th>
+                                <th title="Drawn">D</th>
+                                <th title="Lost">L</th>
+                                <th title="Goal difference">GD</th>
+                                <th>Pts</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in standings %}
+                                <tr>
+                                    <td><span class="position">{{ row.position }}</span></td>
+                                    <td><a href="/teams/{{ row.team_id }}">{{ row.team_name }}</a></td>
+                                    <td>{{ row.played }}</td>
+                                    <td>{{ row.wins }}</td>
+                                    <td>{{ row.draws }}</td>
+                                    <td>{{ row.losses }}</td>
+                                    <td>{{ '%+d'|format(row.goal_difference) }}</td>
+                                    <td><strong>{{ row.points }}</strong></td>
+                                </tr>
+{% else %}<tr><td colspan="8" class="empty-cell">No teams registered yet.</td></tr>{% endfor %}
+    </tbody>
+    </table>
+    </div>
+    </section>
+    <aside class="col-xl-4">
+        <div class="section-heading">
+            <div>
+                <span class="section-kicker">CLUBS</span>
+                <h2>Teams</h2>
+            </div>
+            <span class="count-pill">{{ teams|length }}</span>
+        </div>
+        <div class="team-list">
+            {% for team in teams %}<a href="/teams/{{ team.id }}">{% if team.logo_url %}<img class="team-monogram team-logo"
+     src="{{ team.logo_url }}"
+     alt="{{ team.name }} logo">{% else %}<span class="team-monogram">{{ team.name[:2]|upper }}</span>{% endif %}<span>{{ team.name }}<small>{{ team.players|length }} <span>players</span></small></span><span>→</span></a>{% else %}<p class="empty-copy">No teams registered.</p>{% endfor %}
+        </div>
+    </aside>
+    </div>
+    <section class="mt-5 pt-3">
+        <div class="section-heading">
+            <div>
+                <span class="section-kicker">PLAYER PERFORMANCE</span>
+                <h2>Top scorers</h2>
+            </div>
+        </div>
+        <div class="table-shell">
+            <table class="table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Pos</th>
+                        <th>Player</th>
+                        <th>Team</th>
+                        <th>Goals</th>
+                        <th>Assists</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in top_scorers %}
+                        <tr>
+                            <td><span class="position">{{ row.position }}</span></td>
+                            <td><a href="/players/{{ row.player_id }}/stats"><strong>{{ row.player_name }}</strong></a></td>
+                            <td><a href="/teams/{{ row.team_id }}">{{ row.team_name }}</a></td>
+                            <td><strong>{{ row.goals }}</strong></td>
+                            <td>{{ row.assists }}</td>
+                        </tr>
+{% else %}<tr><td colspan="5"
+    class="empty-cell">Scorers will appear after organizers add goal details to completed matches.</td></tr>{% endfor %}
+    </tbody>
+    </table>
+    </div>
+    </section>
+    <section class="mt-5 pt-3">
+        <div class="section-heading">
+            <div>
+                <span class="section-kicker">MATCH CENTRE</span>
+                <h2>Fixtures & results</h2>
+            </div>
+        </div>
+        <div class="fixture-list">
+            {% for match in fixtures %}
+                <article class="fixture-row">
+                    <div class="fixture-meta"><time>{{ match.match_date|local_datetime("%d %b") }}</time><small>{{ match.match_date|local_datetime("%H:%M") }}{% if match.venue %} · {{ match.venue }}{% endif %}</small></div>
+                    <div class="fixture-teams"><strong>{{ match.home_team.name }}</strong><span class="score">{% if match.status == "completed" %}{{ match.home_score }} — {{ match.away_score }}{% else %}vs{% endif %}</span><strong>{{ match.away_team.name }}</strong></div>
+                    <span class="match-status status-{{ match.status }}">{{ match.status }}</span>
+                    {% if match.goal_events %}<div class="goal-details">{% for event in match.goal_events %}<span><strong>{{ event.minute }}′</strong> {{ event.scorer.name }}{% if event.assist_player %} <small>(assist: {{ event.assist_player.name }})</small>{% endif %}</span>{% endfor %}</div>{% endif %}
+                </article>
+{% else %}<div class="empty-state compact"><h3>No fixtures yet</h3><p>The schedule will appear here when it is published.</p></div>{% endfor %}
+    </div>
+    </section>
+    </div>
+{% endblock %}

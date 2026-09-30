@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}{{ team.name }} · Mini Football{% endblock %}
+{% block content %}
+    <section class="competition-head"><div class="container-xl py-5"><a class="back-link" href="/tournaments/{{ team.tournament_id }}">← {{ team.tournament.name }}</a><div class="d-flex align-items-center gap-4 mt-4">{% if team.logo_url %}<img class="team-crest team-logo"
+     src="{{ team.logo_url }}"
+     alt="{{ team.name }} logo">{% else %}<span class="team-crest">{{ team.name[:2]|upper }}</span>{% endif %}<div><span class="section-kicker">TEAM</span><h1 class="display-title">{{ team.name }}</h1></div></div></div></section>
+    <div class="container-xl py-5">
+        <div class="row g-5">
+            <section class="col-lg-7"><div class="section-heading"><div><span class="section-kicker">SQUAD</span><h2>Players</h2></div><span class="count-pill">{{ players|length }}</span></div><div class="table-shell"><table class="table align-middle mb-0"><thead><tr><th>No.</th><th>Player</th><th>Position</th><th>G</th><th>A</th><th></th></tr></thead><tbody>{% for player in players %}<tr><td>{{ player.jersey_number or '—' }}</td><td><strong>{{ player.name }}</strong></td><td>{{ player.position or '—' }}</td><td>{{ player_stats[player.id].goals }}</td><td>{{ player_stats[player.id].assists }}</td><td class="text-end"><a class="text-link" href="/players/{{ player.id }}/stats">Stats →</a></td></tr>{% else %}<tr><td colspan="6" class="empty-cell">No players registered.</td></tr>{% endfor %}</tbody></table></div></section>
+            <section class="col-lg-5"><div class="section-heading"><div><span class="section-kicker">SCHEDULE</span><h2>Matches</h2></div></div><div class="mini-fixtures">{% for match in matches %}<div><time>{{ match.match_date|local_datetime("%d %b, %H:%M") }}</time><strong>{{ match.home_team.name }} {% if match.status == "completed" %}{{ match.home_score }}–{{ match.away_score }}{% else %}vs{% endif %} {{ match.away_team.name }}</strong><small>{{ match.status|capitalize }}</small></div>{% else %}<p class="empty-copy">No matches scheduled.</p>{% endfor %}</div></section>
+        </div>
+    </div>
+{% endblock %}

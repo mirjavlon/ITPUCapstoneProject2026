@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Record result · Mini Football{% endblock %}
+{% block content %}<section class="dashboard-head"><div class="container-xl py-5"><a class="back-link"
+   href="/dashboard/tournaments/{{ match.tournament_id }}/edit">← {{ match.tournament.name }}</a><div class="mt-3"><span class="section-kicker">OFFICIAL RESULT</span><h1 class="display-title">Record score</h1></div></div></section><div class="container-xl py-5"><div class="form-narrow panel-card">{% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}<div class="score-heading"><span><strong>{{ match.home_team.name }}</strong><small>Home</small></span><span>vs</span><span><strong>{{ match.away_team.name }}</strong><small>Away</small></span></div><p class="text-center text-secondary">{{ match.match_date|local_datetime }}{% if match.venue %} · {{ match.venue }}{% endif %}</p><form method="post" class="form-stack"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="expected_version" value="{{ match.version }}"><div class="score-inputs"><div><label for="home_score">{{ match.home_team.name }}</label><input class="form-control"
+       id="home_score"
+       name="home_score"
+       type="number"
+       min="0"
+       max="99"
+       required
+       value="{{ match.home_score if match.home_score is not none else '' }}"></div><span>—</span><div><label for="away_score">{{ match.away_team.name }}</label><input class="form-control"
+       id="away_score"
+       name="away_score"
+       type="number"
+       min="0"
+       max="99"
+       required
+       value="{{ match.away_score if match.away_score is not none else '' }}"></div></div><div><label class="form-label" for="reason">Correction reason {% if match.status != "completed" %}<span class="optional">optional</span>{% endif %}</label><textarea class="form-control"
+          id="reason"
+          name="reason"
+          rows="3"
+          maxlength="255"
+          {% if match.status == 'completed' %}required{% endif %}></textarea></div><button class="btn btn-accent" type="submit">{{ 'Correct result' if match.status == 'completed' else 'Publish result' }}</button></form>{% if match.status == "completed" %}<div class="d-grid mt-3"><a class="btn btn-dark" href="/dashboard/matches/{{ match.id }}/goals">Manage scorers and assists</a></div><hr class="my-4"><form method="post"
+      action="/dashboard/matches/{{ match.id }}/withdraw"
+      class="form-stack"
+      data-confirm="Withdraw this result and remove it, including goal details, from the standings and player statistics?"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="expected_version" value="{{ match.version }}"><div><label class="form-label" for="withdraw_reason">Reason for withdrawal</label><input class="form-control"
+       id="withdraw_reason"
+       name="reason"
+       required
+       minlength="3"
+       maxlength="255"></div><button class="btn btn-outline-danger" type="submit">Withdraw result</button></form>{% endif %}</div></div>{% endblock %}

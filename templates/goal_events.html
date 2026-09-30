@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}Goal details · Mini Football{% endblock %}
+{% block content %}
+    <section class="dashboard-head">
+        <div class="container-xl py-5">
+            <a class="back-link"
+               href="/dashboard/tournaments/{{ match.tournament_id }}/edit">← {{ match.tournament.name }}</a>
+            <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mt-3">
+                <div>
+                    <span class="section-kicker">MATCH GOAL DETAILS</span>
+                    <h1 class="display-title">Scorers & assists</h1>
+                </div>
+                <a class="btn btn-outline-light"
+                   href="/dashboard/matches/{{ match.id }}/score">Correct score</a>
+            </div>
+        </div>
+    </section>
+    {% set counts = namespace(home=0, away=0) %}
+    {% for event in events %}
+        {% if event.team_id == match.home_team_id %}
+            {% set counts.home = counts.home + 1 %}
+        {% else %}
+            {% set counts.away = counts.away + 1 %}
+        {% endif %}
+    {% endfor %}
+    <div class="container-xl py-5">
+        <div class="score-heading mb-4">
+            <span><strong>{{ match.home_team.name }}</strong><small>{{ counts.home }} of {{ match.home_score }} goals detailed</small></span>
+            <span>{{ match.home_score }} — {{ match.away_score }}</span>
+            <span><strong>{{ match.away_team.name }}</strong><small>{{ counts.away }} of {{ match.away_score }} goals detailed</small></span>
+        </div>
+        <div class="row g-4">
+            <section class="col-xl-5">
+                <div class="panel-card">
+                    <span class="section-kicker">ADD GOAL</span>
+                    <h2>Who scored?</h2>
+                    {% if match.home_score + match.away_score > events|length %}
+                        <form method="post" class="form-stack">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                            <div>
+                                <label class="form-label" for="scorer_id">Scorer</label>
+                                <select class="form-select" id="scorer_id" name="scorer_id" required>
+                                    <option value="">Choose player</option>
+                                    {% if counts.home < match.home_score %}<optgroup label="{{ match.home_team.name }}">{% for player in home_players %}<option value="{{ player.id }}">#{{ player.jersey_number or '—' }} {{ player.name }}</option>{% endfor %}</optgroup>{% endif %}
+                                    {% if counts.away < match.away_score %}<optgroup label="{{ match.away_team.name }}">{% for player in away_players %}<option value="{{ player.id }}">#{{ player.jersey_number or '—' }} {{ player.name }}</option>{% endfor %}</optgroup>{% endif %}
+                                </select>
+                            </div>
+                            <div>
+                                <label class="form-label"
+                                       for="assist_player_id">Assisted by <span class="optional">optional</span></label>
+                                <select class="form-select" id="assist_player_id" name="assist_player_id">
+                                    <option value="">No assist</option>
+                                    <optgroup label="{{ match.home_team.name }}">{% for player in home_players %}<option value="{{ player.id }}">#{{ player.jersey_number or '—' }} {{ player.name }}</option>{% endfor %}</optgroup>
+                                    <optgroup label="{{ match.away_team.name }}">{% for player in away_players %}<option value="{{ player.id }}">#{{ player.jersey_number or '—' }} {{ player.name }}</option>{% endfor %}</optgroup>
+                                </select>
+                                <div class="form-text">The assister must be a different player on the scorer's team.</div>
+                            </div>
+                            <div>
+                                <label class="form-label" for="minute">Minute</label>
+                                <input class="form-control"
+                                       id="minute"
+                                       name="minute"
+                                       type="number"
+                                       min="1"
+                                       max="120"
+                                       required
+                                       placeholder="e.g. 34">
+                            </div>
+                            <button class="btn btn-accent" type="submit">Add goal detail</button>
+                        </form>
+                    {% else %}
+                        <div class="alert alert-success mb-0"
+                             role="status">Every goal in the official score has a scorer.</div>
+                    {% endif %}
+                </div>
+            </section>
+            <section class="col-xl-7">
+                <div class="section-heading">
+                    <div>
+                        <span class="section-kicker">RECORDED</span>
+                        <h2>Goal timeline</h2>
+                    </div>
+                    <span class="count-pill">{{ events|length }} goals</span>
+                </div>
+                <div class="table-shell">
+                    <table class="table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Min</th>
+                                <th>Team</th>
+                                <th>Scorer</th>
+                                <th>Assist</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for event in events %}
+                                <tr>
+                                    <td><strong>{{ event.minute }}′</strong></td>
+                                    <td>{{ event.team.name }}</td>
+                                    <td><a href="/players/{{ event.scorer_id }}/stats"><strong>{{ event.scorer.name }}</strong></a></td>
+                                    <td>{% if event.assist_player %}<a href="/players/{{ event.assist_player_id }}/stats">{{ event.assist_player.name }}</a>{% else %}—{% endif %}</td>
+                                    <td class="text-end">
+                                        <form method="post"
+                                              action="/dashboard/matches/{{ match.id }}/goals/{{ event.id }}/delete"
+                                              data-confirm="Remove this goal detail from player statistics?">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="btn btn-sm btn-outline-danger" type="submit">Remove</button>
+                                        </form>
+                                    </td>
+                                </tr>
+{% else %}<tr><td colspan="5" class="empty-cell">No scorers have been recorded yet.</td></tr>{% endfor %}
+    </tbody>
+    </table>
+    </div>
+    </section>
+    </div>
+    </div>
+{% endblock %}

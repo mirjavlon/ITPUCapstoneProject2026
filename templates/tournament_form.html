@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Manage ' ~ tournament.name if tournament else 'New tournament' }} · Mini Football{% endblock %}
+{% block content %}
+    <section class="dashboard-head"><div class="container-xl py-5"><a class="back-link" href="/dashboard">← Dashboard</a><div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mt-3"><div><span class="section-kicker">ORGANIZER</span><h1 class="display-title">{{ tournament.name if tournament else 'New tournament' }}</h1></div>{% if tournament %}<a class="btn btn-outline-light" href="/tournaments/{{ tournament.id }}">Preview public page</a>{% endif %}</div></div></section>
+    <div class="container-xl py-5">
+        <div class="row g-5">
+            <section class="col-xl-7">
+                <div class="panel-card">
+                    <div class="panel-heading"><div><span class="section-kicker">DETAILS</span><h2>Competition setup</h2></div>{% if tournament %}<span class="match-status status-{{ tournament.status }}">{{ tournament.status }}</span>{% endif %}</div>
+                    {% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
+                    <form method="post" class="form-stack">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <div>
+                            <label class="form-label" for="name">Tournament name</label><input class="form-control"
+       id="name"
+       name="name"
+       required
+       minlength="2"
+       maxlength="120"
+       value="{{ form.name if form.name is defined else tournament.name if tournament else '' }}">
+                        </div>
+                        {% if tournament %}<div><label class="form-label">Public URL</label><div class="input-group"><span class="input-group-text">/tournaments/</span><input class="form-control"
+       value="{{ tournament.slug }}"
+       readonly
+       aria-label="Public URL name"></div><div class="form-text">This URL is created automatically and cannot be changed.</div></div>{% endif %}
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label" for="start_date">Start date</label><input class="form-control"
+       id="start_date"
+       name="start_date"
+       type="date"
+       value="{{ form.start_date if form.start_date is defined else tournament.start_date if tournament and tournament.start_date else '' }}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label" for="end_date">End date</label><input class="form-control"
+       id="end_date"
+       name="end_date"
+       type="date"
+       value="{{ form.end_date if form.end_date is defined else tournament.end_date if tournament and tournament.end_date else '' }}">
+                            </div>
+                        </div>
+                        <fieldset>
+                            <legend class="form-label mb-2">Points system</legend>
+                            <div class="row g-3">
+                                <div class="col-4">
+                                    <label class="small-meta" for="win_points">Win</label><input class="form-control"
+       id="win_points"
+       name="win_points"
+       type="number"
+       min="0"
+       max="10"
+       value="{{ form.win_points if form.win_points is defined else tournament.win_points if tournament else 3 }}">
+                                </div>
+                                <div class="col-4">
+                                    <label class="small-meta" for="draw_points">Draw</label><input class="form-control"
+       id="draw_points"
+       name="draw_points"
+       type="number"
+       min="0"
+       max="10"
+       value="{{ form.draw_points if form.draw_points is defined else tournament.draw_points if tournament else 1 }}">
+                                </div>
+                                <div class="col-4">
+                                    <label class="small-meta" for="loss_points">Loss</label><input class="form-control"
+       id="loss_points"
+       name="loss_points"
+       type="number"
+       min="0"
+       max="10"
+       value="{{ form.loss_points if form.loss_points is defined else tournament.loss_points if tournament else 0 }}">
+                                </div>
+                            </div>
+                        </fieldset>
+                        <button class="btn btn-accent"
+                                type="submit">{{ 'Save changes' if tournament else 'Create tournament' }}</button>
+                    </form>
+                </div>
+            </section>
+            <aside class="col-xl-5">
+                {% if tournament %}
+                    <div class="panel-card">
+                        <span class="section-kicker">VISIBILITY</span>
+                        <h2>Publication status</h2>
+                        <p class="text-secondary">Draft competitions are visible only to organizers and assigned managers.</p>
+                        <div class="status-actions">
+                            {% for value, label in [('draft','Keep draft'),('published','Publish'),('archived','Archive')] %}<form method="post"
+      action="/dashboard/tournaments/{{ tournament.id }}/status"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><input type="hidden" name="tournament_status" value="{{ value }}"><button class="btn {{ 'btn-dark' if tournament.status == value else 'btn-outline-dark' }}"
+        type="submit"
+        {% if tournament.status == value %}disabled{% endif %}>{{ label }}</button></form>{% endfor %}
+                        </div>
+                    </div>
+{% else %}<div class="note-card"><strong>Start in draft</strong><p>You can add teams and fixtures before publishing the competition.</p></div>{% endif %}
+    </aside>
+    </div>
+    {% if tournament %}
+        <section class="mt-5"><div class="section-heading"><div><span class="section-kicker">TEAMS</span><h2>Registered teams</h2></div><a class="btn btn-sm btn-accent"
+   href="/dashboard/teams/new?tournament_id={{ tournament.id }}">Add team</a></div><div class="table-shell"><table class="table align-middle mb-0"><thead><tr><th>Team</th><th>Manager</th><th>Players</th><th>Status</th><th class="text-end">Action</th></tr></thead><tbody>{% for team in teams %}<tr><td><strong>{{ team.name }}</strong></td><td>{{ team.manager.username if team.manager else 'Unassigned' }}</td><td>{{ team.players|length }}</td><td>{{ 'Active' if team.is_active else 'Archived' }}</td><td class="text-end"><a class="btn btn-sm btn-outline-dark"
+   href="/dashboard/teams/{{ team.id }}/edit">Manage</a></td></tr>{% else %}<tr><td colspan="5" class="empty-cell">No teams registered.</td></tr>{% endfor %}</tbody></table></div></section>
+        <section class="mt-5"><div class="section-heading"><div><span class="section-kicker">FIXTURES</span><h2>Schedule & results</h2></div><a class="btn btn-sm btn-accent"
+   href="/dashboard/matches/new?tournament_id={{ tournament.id }}">Schedule match</a></div><div class="fixture-list">{% for match in matches %}<article class="fixture-row"><div class="fixture-meta"><time>{{ match.match_date|local_datetime("%d %b") }}</time><small>{{ match.match_date|local_datetime("%H:%M") }}{% if match.venue %} · {{ match.venue }}{% endif %}</small></div><div class="fixture-teams"><strong>{{ match.home_team.name }}</strong><span class="score">{% if match.status == "completed" %}{{ match.home_score }}–{{ match.away_score }}{% else %}vs{% endif %}</span><strong>{{ match.away_team.name }}</strong></div><div class="row-actions"><span class="match-status status-{{ match.status }}">{{ match.status }}</span>{% if match.status == "completed" %}<a class="btn btn-sm btn-dark"
+   href="/dashboard/matches/{{ match.id }}/goals">Goals</a><a class="btn btn-sm btn-outline-dark"
+   href="/dashboard/matches/{{ match.id }}/score">Correct</a>{% else %}<a class="btn btn-sm btn-outline-dark"
+   href="/dashboard/matches/{{ match.id }}/edit">Edit</a><a class="btn btn-sm btn-dark"
+   href="/dashboard/matches/{{ match.id }}/score">Score</a>{% endif %}</div></article>{% else %}<div class="empty-state compact"><h3>No fixtures yet</h3><p>Add teams, then schedule the first match.</p></div>{% endfor %}</div></section>
+    {% endif %}
+    </div>
+{% endblock %}

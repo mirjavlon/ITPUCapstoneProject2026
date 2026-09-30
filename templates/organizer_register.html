@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Organizer account · Mini Football{% endblock %}
+{% block content %}
+    <section class="auth-shell container-xl">
+        <div class="auth-copy">
+            <span class="section-kicker">TOURNAMENT ORGANIZERS</span>
+            <h1>Create and run your own competition.</h1>
+            <p>Your account can create tournaments and manage the teams, fixtures, results, and players within them.</p>
+        </div>
+        <div class="auth-card">
+            <h2>Create organizer account</h2>
+            <p class="text-secondary">Each organizer can manage only tournaments they create.</p>
+            {% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
+            <form method="post" action="/register-organizer" class="form-stack">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <div>
+                    <label class="form-label" for="username">Username</label>
+                    <input class="form-control"
+                           id="username"
+                           name="username"
+                           required
+                           minlength="3"
+                           maxlength="50"
+                           value="{{ form.username or '' }}"
+                           autocomplete="username">
+                </div>
+                <div>
+                    <label class="form-label" for="email">Email</label>
+                    <input class="form-control"
+                           id="email"
+                           name="email"
+                           type="email"
+                           required
+                           value="{{ form.email or '' }}"
+                           autocomplete="email">
+                </div>
+                <div>
+                    <label class="form-label" for="password">Password</label>
+                    <input class="form-control"
+                           id="password"
+                           name="password"
+                           type="password"
+                           required
+                           minlength="8"
+                           maxlength="72"
+                           autocomplete="new-password">
+                    <div class="form-text">Use at least 8 characters.</div>
+                </div>
+                <button class="btn btn-accent w-100" type="submit">Create organizer account</button>
+            </form>
+            <p class="auth-foot">Already registered? <a href="/login">Sign in</a></p>
+        </div>
+    </section>
+{% endblock %}

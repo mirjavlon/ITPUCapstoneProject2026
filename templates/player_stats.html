@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}{{ player.name }} statistics · Mini Football{% endblock %}
+{% block content %}
+    <section class="competition-head">
+        <div class="container-xl py-5">
+            <a class="back-link" href="/teams/{{ player.team_id }}">← {{ player.team.name }}</a>
+            <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mt-4">
+                <div>
+                    <span class="section-kicker">PLAYER STATISTICS</span>
+                    <h1 class="display-title">{{ player.name }}</h1>
+                    <p class="lead-copy mb-0">#{{ player.jersey_number or '—' }} · {{ player.position or 'Position not set' }} · {{ player.team.name }}</p>
+                </div>
+                {% if current_user and (current_user.is_organizer or player.team.manager_id == current_user.id) %}<a class="btn btn-outline-light"
+   href="/dashboard/players/{{ player.id }}/edit">Edit player</a>{% endif %}
+            </div>
+        </div>
+    </section>
+    <div class="container-xl py-5">
+        <div class="player-metrics mb-5">
+            <div><span>Goals</span><strong>{{ stats.goals }}</strong></div>
+            <div><span>Assists</span><strong>{{ stats.assists }}</strong></div>
+            <div><span>Goal contributions</span><strong>{{ stats.goals + stats.assists }}</strong></div>
+            <div><span>Tournament</span><strong class="metric-name">{{ stats.tournament_name }}</strong></div>
+        </div>
+        <section>
+            <div class="section-heading">
+                <div>
+                    <span class="section-kicker">MATCH HISTORY</span>
+                    <h2>Goals and assists</h2>
+                </div>
+            </div>
+            <div class="table-shell">
+                <table class="table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Match</th>
+                            <th>Contribution</th>
+                            <th>Minute</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for event in contributions %}
+                            <tr>
+                                <td>{{ event.match.match_date|local_datetime("%d %b %Y") }}</td>
+                                <td><a href="/tournaments/{{ event.match.tournament_id }}">{{ event.match.home_team.name }} {{ event.match.home_score }}–{{ event.match.away_score }} {{ event.match.away_team.name }}</a></td>
+                                <td>{% if event.scorer_id == player.id %}<span class="contribution contribution-goal">Goal</span>{% else %}<span class="contribution contribution-assist">Assist for {{ event.scorer.name }}</span>{% endif %}</td>
+                                <td><strong>{{ event.minute }}′</strong></td>
+                            </tr>
+{% else %}<tr><td colspan="4"
+    class="empty-cell">No goals or assists have been recorded for this player.</td></tr>{% endfor %}
+    </tbody>
+    </table>
+    </div>
+    </section>
+    </div>
+{% endblock %}

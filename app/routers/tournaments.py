@@ -1,3 +1,5 @@
+import re
+import unicodedata
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -19,6 +21,20 @@ from app.services.ownership import require_owned_tournament
 from app.services.visibility import require_tournament_access
 
 router = APIRouter(prefix="/api/tournaments", tags=["tournaments"])
+
+
+def generate_tournament_slug(db: db_dependency, name: str) -> str:
+    normalized = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode("ascii")
+    base_slug = re.sub(r"[^a-z0-9]+", "-", normalized.lower()).strip("-")[:110]
+    if len(base_slug) < 2:
+        raise HTTPException(status_code=422, detail="Tournament name must contain at least two letters or numbers")
+
+    slug = base_slug
+    suffix = 2
+    while db.query(Tournament.id).filter(Tournament.slug == slug).first():
+        slug = f"{base_slug[:120 - len(str(suffix)) - 1]}-{suffix}"
+        suffix += 1
+    return slug
 
 
 @router.get("/", response_model=list[TournamentResponse])
@@ -57,13 +73,18 @@ def create_tournament(
     db: db_dependency,
     current_user: Annotated[User, Depends(get_current_organizer)],
 ):
-    tournament = Tournament(**payload.model_dump(), created_by_id=current_user.id)
+    values = payload.model_dump(exclude={"slug"})
+    tournament = Tournament(
+        **values,
+        slug=generate_tournament_slug(db, payload.name),
+        created_by_id=current_user.id,
+    )
     db.add(tournament)
     try:
         db.commit()
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=409, detail="Tournament slug already exists")
+        raise HTTPException(status_code=409, detail="Could not generate a unique public URL. Please try again.")
     db.refresh(tournament)
     return tournament
 
@@ -97,7 +118,7 @@ def update_tournament(
         db.commit()
     except IntegrityError:
         db.rollback()
-        raise HTTPException(status_code=409, detail="Tournament slug already exists")
+        raise HTTPException(status_code=409, detail="Tournament details could not be saved")
     return tournament
 
 

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Sign in · Mini Football{% endblock %}
+{% block content %}
+    <section class="auth-shell container-xl">
+        <div class="auth-copy">
+            <span class="section-kicker">MATCH CONTROL</span>
+            <h1>Run the competition from one clear dashboard.</h1>
+            <p>Manage teams, schedule fixtures and publish results without juggling spreadsheets.</p>
+        </div>
+        <div class="auth-card">
+            <h2>Sign in</h2>
+            <p class="text-secondary">Use your organizer or team manager account.</p>
+            {% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
+            <form method="post" action="/login" class="form-stack">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="next_path" value="{{ next_path }}">
+                <div>
+                    <label class="form-label" for="username">Username</label>
+                    <input class="form-control"
+                           id="username"
+                           name="username"
+                           required
+                           autocomplete="username"
+                           autofocus>
+                </div>
+                <div>
+                    <label class="form-label" for="password">Password</label>
+                    <input class="form-control"
+                           id="password"
+                           name="password"
+                           type="password"
+                           required
+                           autocomplete="current-password">
+                </div>
+                <button class="btn btn-accent w-100" type="submit">Sign in</button>
+            </form>
+            <p class="auth-foot">Team manager? <a href="/register">Create an account</a> · Organizer? <a href="/register-organizer">Create an account</a></p>
+        </div>
+    </section>
+{% endblock %}

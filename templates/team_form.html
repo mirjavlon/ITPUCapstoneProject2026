@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Manage ' ~ team.name if team else 'Register team' }} · Mini Football{% endblock %}
+{% block content %}
+    <section class="dashboard-head"><div class="container-xl py-5"><a class="back-link"
+   href="{{ '/dashboard/tournaments/' ~ team.tournament_id ~ '/edit' if team and current_user.is_organizer else '/dashboard' }}">← Back</a><div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mt-3"><div><span class="section-kicker">TEAM MANAGEMENT</span><h1 class="display-title">{{ team.name if team else 'Register team' }}</h1></div>{% if team %}<a class="btn btn-outline-light" href="/teams/{{ team.id }}">View team page</a>{% endif %}</div></div></section>
+    <div class="container-xl py-5">
+        <div class="row g-5">
+            <section class="col-xl-7"><div class="panel-card"><span class="section-kicker">DETAILS</span><h2>Team information</h2>{% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}<form method="post" class="form-stack" enctype="multipart/form-data"><input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                {% if team %}<div><label class="form-label">Tournament</label><input class="form-control" value="{{ team.tournament.name }}" disabled></div>{% else %}<div><label class="form-label" for="tournament_id">Tournament</label><select class="form-select" id="tournament_id" name="tournament_id" required><option value="">Choose tournament</option>{% for tournament in tournaments %}<option value="{{ tournament.id }}"
+        {% if form.tournament_id|string == tournament.id|string %}selected{% endif %}>{{ tournament.name }}</option>{% endfor %}</select></div>{% endif %}
+                <div>
+                    <label class="form-label" for="name">Team name</label><input class="form-control"
+       id="name"
+       name="name"
+       required
+       minlength="2"
+       maxlength="100"
+       value="{{ form.name if form.name is defined else team.name if team else '' }}">
+                </div>
+                {% if current_user.is_organizer %}<div><label class="form-label" for="manager_id">Team manager</label><select class="form-select" id="manager_id" name="manager_id"><option value="">Unassigned</option>{% for manager in managers %}<option value="{{ manager.id }}"
+        {% if (form.manager_id if form.manager_id is defined else team.manager_id if team else '')|string == manager.id|string %}selected{% endif %}>{{ manager.username }} · {{ manager.email }}</option>{% endfor %}</select></div>{% endif %}
+                <div>
+                    <label class="form-label" for="contact_info">Contact information</label><input class="form-control"
+       id="contact_info"
+       name="contact_info"
+       maxlength="255"
+       value="{{ form.contact_info if form.contact_info is defined else team.contact_info if team and team.contact_info else '' }}">
+                    <div class="form-text">Visible to organizers. Use only details needed for tournament communication.</div>
+                </div>
+                <div>
+                    <label class="form-label" for="logo_file">Upload team logo <span class="optional">optional</span></label><input class="form-control"
+       id="logo_file"
+       name="logo_file"
+       type="file"
+       accept="image/png,image/jpeg,image/gif,image/webp">
+                    <div class="form-text">PNG, JPEG, GIF, or WebP. Maximum file size: 5 MB.</div>
+                </div>
+                <div>
+                    <label class="form-label" for="logo_url">Logo image URL <span class="optional">optional</span></label><input class="form-control"
+       id="logo_url"
+       name="logo_url"
+       type="url"
+       maxlength="500"
+       value="{{ form.logo_url if form.logo_url is defined else team.logo_url if team and team.logo_url else '' }}">
+                    <div class="form-text">If you upload an image, the upload is used instead.</div>
+                </div>
+                {% if current_user.is_organizer and team %}<div class="form-check"><input class="form-check-input"
+       id="is_active"
+       name="is_active"
+       type="checkbox"
+       {% if team.is_active %}checked{% endif %}><label class="form-check-label" for="is_active">Active team</label></div>{% endif %}
+                <button class="btn btn-accent" type="submit">{{ 'Save changes' if team else 'Register team' }}</button>
+                </form>
+                </div>
+            </section>
+            <aside class="col-xl-5">{% if team %}<div class="panel-card"><span class="section-kicker">ROSTER</span><div class="d-flex justify-content-between align-items-center"><h2>Players</h2><a class="btn btn-sm btn-dark"
+   href="/dashboard/teams/{{ team.id }}/players/new">Add player</a></div><div class="manager-roster mt-3">{% for player in players %}<div><span class="shirt-number">{{ player.jersey_number or '—' }}</span><span><strong>{{ player.name }}</strong><small>{{ player.position or 'Position not set' }}</small></span><span class="roster-actions"><a href="/players/{{ player.id }}/stats">Stats</a><a href="/dashboard/players/{{ player.id }}/edit">Edit</a></span></div>{% else %}<p class="empty-copy px-0">No players registered.</p>{% endfor %}</div></div><form method="post"
+      action="/dashboard/teams/{{ team.id }}/delete"
+      data-confirm="Remove this team? Teams with match history will be archived."><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="btn btn-link text-danger px-0 mt-3" type="submit">Remove team</button></form>{% else %}<div class="note-card"><strong>Manager access</strong><p>Managers can edit only teams assigned to their account.</p></div>{% endif %}</aside>
+        </div>
+    </div>
+{% endblock %}
