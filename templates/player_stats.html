@@ -3,7 +3,7 @@
 {% block content %}
     <section class="competition-head">
         <div class="container-xl py-5">
-            <a class="back-link" href="/teams/{{ player.team_id }}">← {{ player.team.name }}</a>
+            <a class="back-link" href="/teams/{{ player.team_id }}"><span>← Back</span></a>
             <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mt-4">
                 <div>
                     <span class="section-kicker">PLAYER STATISTICS</span>
@@ -44,7 +44,7 @@
                             <tr>
                                 <td>{{ event.match.match_date|local_datetime("%d %b %Y") }}</td>
                                 <td><a href="/tournaments/{{ event.match.tournament_id }}">{{ event.match.home_team.name }} {{ event.match.home_score }}–{{ event.match.away_score }} {{ event.match.away_team.name }}</a></td>
-                                <td>{% if event.scorer_id == player.id %}<span class="contribution contribution-goal">Goal</span>{% else %}<span class="contribution contribution-assist">Assist for {{ event.scorer.name }}</span>{% endif %}</td>
+                                <td>{% if event.scorer_id == player.id %}<span class="contribution contribution-goal">Goal</span>{% else %}<span class="contribution contribution-assist"><span>Assist for</span> {{ event.scorer.name }}</span>{% endif %}</td>
                                 <td><strong>{{ event.minute }}′</strong></td>
                             </tr>
 {% else %}<tr><td colspan="4"

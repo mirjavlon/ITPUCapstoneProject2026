@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}{{ 'Edit player' if player else 'Add player' }} · Mini Football{% endblock %}
-{% block content %}<section class="dashboard-head"><div class="container-xl py-5"><a class="back-link" href="/dashboard/teams/{{ team.id }}/edit">← {{ team.name }}</a><div class="mt-3"><span class="section-kicker">ROSTER</span><h1 class="display-title">{{ 'Edit player' if player else 'Add player' }}</h1></div></div></section><div class="container-xl py-5"><div class="form-narrow panel-card">{% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}<form method="post" class="form-stack"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><div><label class="form-label" for="name">Player name</label><input class="form-control"
+{% block content %}<section class="dashboard-head"><div class="container-xl py-5"><a class="back-link" href="/dashboard/teams/{{ team.id }}/edit"><span>← Back</span></a><div class="mt-3"><span class="section-kicker">ROSTER</span><h1 class="display-title">{{ 'Edit player' if player else 'Add player' }}</h1></div></div></section><div class="container-xl py-5"><div class="form-narrow panel-card">{% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}<form method="post" class="form-stack"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><div><label class="form-label" for="name">Player name</label><input class="form-control"
        id="name"
        name="name"
        required

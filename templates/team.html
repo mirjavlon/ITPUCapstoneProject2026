@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ team.name }} · Mini Football{% endblock %}
 {% block content %}
-    <section class="competition-head"><div class="container-xl py-5"><a class="back-link" href="/tournaments/{{ team.tournament_id }}">← {{ team.tournament.name }}</a><div class="d-flex align-items-center gap-4 mt-4">{% if team.logo_url %}<img class="team-crest team-logo"
+    <section class="competition-head"><div class="container-xl py-5"><a class="back-link" href="/tournaments/{{ team.tournament_id }}"><span>← Back</span></a><div class="d-flex align-items-center gap-4 mt-4">{% if team.logo_url %}<img class="team-crest team-logo"
      src="{{ team.logo_url }}"
      alt="{{ team.name }} logo">{% else %}<span class="team-crest">{{ team.name[:2]|upper }}</span>{% endif %}<div><span class="section-kicker">TEAM</span><h1 class="display-title">{{ team.name }}</h1></div></div></div></section>
     <div class="container-xl py-5">
